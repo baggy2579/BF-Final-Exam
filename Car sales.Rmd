@@ -1,0 +1,301 @@
+---
+title: "Car Sales Forecasting"
+author: "Alfazkhan"
+date: "2024-11-04"
+output: html_document
+---
+
+```{r}
+# Load required libraries
+# Libraries used for time series analysis, forecasting, and plotting
+library(readr)
+library(fpp2)
+library(ggplot2)
+library(forecast)
+library(tseries)
+
+# Import the dataset
+# The dataset contains car sales data with columns "Date" and "Sales"
+sales_data <- read.csv("C:/Users/Alfaz Khan/Downloads/sales.csv")
+colnames(sales_data) <- c("Date", "Sales")
+
+# Convert Sales column to numeric for analysis
+sales_data$Sales <- as.numeric(sales_data$Sales)
+
+# Remove missing or invalid values
+# This ensures data integrity for the analysis
+sales_data <- na.omit(sales_data)
+
+# Convert to Time Series
+# Convert the cleaned data into a time series object for analysis
+ts_sales <- ts(sales_data$Sales, start = c(2019, 1), end = c(2024, 11), frequency = 12)
+
+# Plot the time series
+plot(ts_sales, main = "Monthly Car Sales", ylab = "Sales", xlab = "Time")
+# Observations:
+# The graph shows monthly car sales data. A noticeable trend is observed, 
+# with fluctuations indicating seasonality and variability over time.
+
+# STL Decomposition
+# Decompose the time series into trend, seasonal, and remainder components
+sales_decomposition <- stl(ts_sales, s.window = "periodic")
+plot(sales_decomposition, main = "STL Decomposition")
+# Observations:
+# Trend: Highlights a long-term pattern, peaking in mid-2022 and declining afterward.
+# Seasonal: Displays recurring monthly patterns.
+# Remainder: Shows random fluctuations or irregularities not explained by trend or seasonality.
+
+# Naive Forecast Method
+naive_forecast <- naive(ts_sales, h = 12)
+plot(naive_forecast, main = "Naive Forecast")
+
+# Explanation of Naive Forecast Output
+# • The Naive method assumes future values will be the same as the last observed value.
+# • This results in a flat-line forecast with no consideration of trends or seasonality.
+# • It serves as a simple benchmark for comparison against more sophisticated methods.
+
+# Calculate accuracy metrics for Naive forecast
+naive_accuracy <- accuracy(naive_forecast)
+print(naive_accuracy)
+# Explanation:
+# • RMSE, MAE, and MAPE are computed to assess the forecast performance.
+# • These metrics provide insights into the error levels and overall accuracy of the Naive method.
+
+# Perform Residual Analysis
+checkresiduals(naive_forecast)
+
+# Residual Plot
+plot(naive_forecast$residuals, main = "Residuals of Naive Forecast", ylab = "Residuals", xlab = "Time")
+# Explanation:
+# • The residual plot shows deviations between the observed and forecasted values over time.
+# • Ideally, residuals should be randomly scattered around zero, indicating no systematic bias in the model.
+# • In this case, patterns in the residuals suggest the Naive method fails to capture certain trends in the data.
+
+# Histogram of Residuals
+hist(naive_forecast$residuals, main = "Histogram of Residuals", xlab = "Residuals")
+# Explanation:
+# • The histogram shows the distribution of residuals, helping identify any skewness or bias.
+# • A roughly symmetric histogram centered at zero indicates balanced forecast errors.
+# • If the residuals are not symmetric, the model may be systematically over- or under-forecasting.
+
+# Plot of Fitted Values vs. Residuals
+plot(fitted(naive_forecast), naive_forecast$residuals, 
+     main = "Fitted Values vs. Residuals", xlab = "Fitted Values", ylab = "Residuals")
+# Explanation:
+# • This plot checks for correlation between fitted values and residuals.
+# • A random scatter around zero indicates no systematic error. Patterns here may indicate the model's limitations in capturing the data.
+
+# Plot of Actual Values vs. Residuals
+plot(ts_sales, naive_forecast$residuals, 
+     main = "Actual Values vs. Residuals", xlab = "Actual Sales", ylab = "Residuals")
+# Explanation:
+# • This plot examines whether residuals vary systematically with actual sales values.
+# • Ideally, the residuals should be randomly distributed around zero with no relationship to the actual sales values.
+# • Any noticeable patterns suggest the model fails to explain all variations in the data.
+
+# Summary
+# • The Naive method is a simple approach and works as a baseline for comparison.
+# • Residual analysis shows that the method is limited in capturing trends and seasonality, as evident from patterns in residuals.
+# • While it is suitable for short-term forecasts, it may not perform well for datasets with strong trends or seasonal components.
+
+
+# Mean Forecast
+# Forecast using the Mean method, which assumes all future values are equal to the mean of past values
+mean_forecast <- meanf(ts_sales, h = 12)
+plot(mean_forecast, main = "Mean Forecast")
+# Observations:
+# The Mean forecast produces a horizontal line representing the average of past values.
+# It is simplistic and ignores trends or seasonality, making it less reliable for complex data.
+
+# Accuracy metrics for Mean forecast
+mean_accuracy <- accuracy(mean_forecast)
+
+# Simple Exponential Smoothing
+# Apply Simple Exponential Smoothing to forecast future values
+ses_model <- ses(ts_sales, h = 12)
+plot(ses_model, main = "SES Forecast")
+# Observations:
+# • The SES model adjusts predictions based on recent observations but does not consider trend or seasonality.
+# • The confidence intervals widen over time, reflecting increasing uncertainty.
+
+# Calculate accuracy metrics for SES
+ses_accuracy <- accuracy(ses_model)
+# Print SES accuracy
+print(ses_accuracy)
+# Explanation:
+# • RMSE, MAE, and MAPE metrics provide insights into the model's accuracy.
+# • Lower values indicate better model performance.
+
+# Perform Residual Analysis for SES
+
+# Residual Plot
+plot(ses_model$residuals, main = "Residuals of SES Forecast", ylab = "Residuals", xlab = "Time")
+# Explanation:
+# • This plot shows residuals over time, i.e., the differences between observed and forecasted values.
+# • Ideally, residuals should be randomly scattered around zero, indicating no systematic bias in the model.
+# • Patterns in residuals suggest the SES model may not fully capture all patterns in the data.
+
+# Histogram of Residuals
+hist(ses_model$residuals, main = "Histogram of Residuals", xlab = "Residuals")
+# Explanation:
+# • The histogram shows the frequency distribution of residuals.
+# • A symmetric histogram centered at zero indicates balanced forecast errors with minimal bias.
+# • Skewness or non-symmetry suggests systematic over- or under-forecasting.
+
+# Plot of Fitted Values vs. Residuals
+plot(fitted(ses_model), ses_model$residuals, 
+     main = "Fitted Values vs. Residuals", xlab = "Fitted Values", ylab = "Residuals")
+# Explanation:
+# • This plot checks for correlation between fitted values and residuals.
+# • Ideally, residuals should be randomly scattered around zero, with no visible patterns.
+# • Patterns in this plot indicate that SES may fail to capture certain trends in the data.
+
+# Plot of Actual Values vs. Residuals
+plot(ts_sales, ses_model$residuals, 
+     main = "Actual Values vs. Residuals", xlab = "Actual Sales", ylab = "Residuals")
+# Explanation:
+# • This plot examines whether residuals vary systematically with actual sales values.
+# • Ideally, residuals should be randomly distributed around zero with no relationship to actual sales values.
+# • Patterns in this plot suggest SES might not explain all variability in the data.
+
+# Residual Diagnostics for SES
+checkresiduals(ses_model)
+# Explanation:
+# • This function provides a summary of residual analysis, including ACF of residuals and Ljung-Box test.
+# • Significant autocorrelation in residuals or a high p-value in the test indicates the model may need improvement.
+
+# Summary of Residual Analysis for SES
+# • The residual plots and diagnostics help assess the SES model's fit to the data.
+# • Random residuals with no significant patterns indicate a good fit.
+# • However, any visible patterns in the residual plots suggest the model might miss trends or seasonality in the dataset.
+
+
+# Holt-Winters Forecast
+# Apply Holt-Winters additive method to account for level, trend, and seasonality in forecasting
+hw_model <- HoltWinters(ts_sales, seasonal = "additive")
+hw_forecast <- forecast(hw_model, h = 12)
+plot(hw_forecast, main = "Holt-Winters Forecast")
+# Observations:
+# The Holt-Winters method accounts for seasonality and trend, making it more reliable for periodic data.
+# Confidence intervals reflect growing uncertainty over the forecast horizon.
+
+# Residual analysis for Holt-Winters
+checkresiduals(hw_model)
+# Observations:
+# Residuals appear random with minimal patterns, indicating a reasonably good model fit.
+
+# Accuracy metrics for Holt-Winters forecast
+hw_accuracy <- accuracy(hw_forecast)
+
+# Stationarity Check
+# Perform the Augmented Dickey-Fuller test to check for stationarity
+adf_test <- adf.test(ts_sales)
+print(adf_test)
+
+# Observation:
+# If the p-value < 0.05, the series is stationary. Otherwise, differencing is needed.
+
+# Differencing
+# Determine the number of differences needed to make the series stationary
+d <- ndiffs(ts_sales)
+cat("Number of differences needed:", d, "\n")
+
+# Apply differencing if needed
+if (!is.na(d) && d > 0) {
+  diff_sales <- diff(ts_sales, differences = d)
+  plot(diff_sales, main = "Differenced Time Series")
+  # Observations:
+  # The differenced series removes trend components, making the data more stationary.
+} else {
+  cat("No differencing needed. Using original series.\n")
+  diff_sales <- ts_sales
+}
+
+# ACF and PACF
+# Plot the ACF and PACF of the differenced series to identify patterns
+Acf(diff_sales, main = "ACF of Differenced Series")
+# Observations:
+# ACF shows significant spikes at initial lags, indicating autocorrelation in the data.
+
+Pacf(diff_sales, main = "PACF of Differenced Series")
+# Observations:
+# PACF helps identify the order of the AR component for ARIMA modeling.
+
+# Fit ARIMA Model
+# Automatically fit an ARIMA model to the time series
+auto_arima_model <- auto.arima(ts_sales, seasonal = FALSE, stepwise = FALSE, trace = TRUE)
+summary(auto_arima_model)
+
+# Forecast with ARIMA
+# Generate a 1-year forecast using the ARIMA model
+forecast_1yr <- forecast(auto_arima_model, h = 12)
+plot(forecast_1yr, main = "ARIMA Forecast (1 Year)")
+# Observations:
+# ARIMA forecast accounts for trend and residual patterns, offering a refined prediction.
+# Confidence intervals reflect uncertainty over the forecast horizon.
+
+# Generate a 2-year forecast using the ARIMA model
+forecast_2yr <- forecast(auto_arima_model, h = 24)
+plot(forecast_2yr, main = "ARIMA Forecast (2 Years)")
+# Observations:
+# The 2-year ARIMA forecast extends predictions further into the future, with larger confidence intervals.
+
+# Residual Diagnostics
+# Check residuals of the ARIMA model to validate the fit
+checkresiduals(auto_arima_model)
+# Observations:
+# Residuals appear random with minimal autocorrelation, indicating a good model fit.
+
+# Accuracy Summary
+# Calculate accuracy metrics for ARIMA forecasts
+accuracy_arima <- accuracy(forecast_1yr)
+
+# Create an accuracy summary table
+accuracy_summary <- data.frame(
+  Model = c("Naive", "Mean", "SES", "Holt-Winters", "ARIMA"),
+  RMSE = c(naive_accuracy[, "RMSE"], 
+           mean_accuracy[, "RMSE"], 
+           ses_accuracy[, "RMSE"], 
+           hw_accuracy[, "RMSE"], 
+           accuracy_arima[, "RMSE"]),
+  MAE = c(naive_accuracy[, "MAE"], 
+          mean_accuracy[, "MAE"], 
+          ses_accuracy[, "MAE"], 
+          hw_accuracy[, "MAE"], 
+          accuracy_arima[, "MAE"]),
+  MAPE = c(naive_accuracy[, "MAPE"], 
+           mean_accuracy[, "MAPE"], 
+           ses_accuracy[, "MAPE"], 
+           hw_accuracy[, "MAPE"], 
+           accuracy_arima[, "MAPE"])
+)
+
+# Print the accuracy summary table
+print(accuracy_summary)
+
+# Observations
+cat("Summary of ARIMA Forecast:\n")
+print(auto_arima_model)
+
+# Conclusion of Time Series Analysis
+# • The time series analysis shows variability in car sales over time, with noticeable seasonality and an overall downward trend in recent periods.
+# • The STL decomposition highlighted a peak in sales in 2022, followed by a consistent decline.
+#   The seasonal component indicates recurring monthly patterns, while the trend shows a steady decrease.
+
+# Forecast Summary
+# • Based on the forecasts:
+#   - For the next year: The value of the time series is expected to either decrease slightly or stay flat, as most methods show stabilization or minor downward movement.
+#   - For the next 2 years: The downward trend is expected to continue, with increasing uncertainty as reflected in the widening confidence intervals of the forecasts.
+
+# Ranking of Forecasting Methods (including RMSE values for comparison)
+# 1. ARIMA: RMSE = 0.7546. The ARIMA model performed best for this dataset as it accounted for trends and residual patterns effectively. 
+#    Residual diagnostics indicated a good fit with minimal autocorrelation, and it provided the lowest error among all models.
+# 2. SES (Simple Exponential Smoothing): RMSE = 0.7992. This method performed well in capturing the level of the series but could not account for the trend or seasonality. 
+#    Its accuracy metrics are comparable to ARIMA.
+# 3. Naive Forecast: RMSE = 0.8064. The Naive method served as a baseline and worked as a simple benchmark. While simple, it showed moderate accuracy for short-term forecasts.
+# 4. Holt-Winters: RMSE = 0.9622. This method captured both the trend and seasonality, making it suitable for this periodic dataset. However, its RMSE was slightly higher than SES and ARIMA.
+# 5. Mean Forecast: RMSE = 1.8528. The Mean method provided the least accurate forecasts due to its simplicity, producing a flat-line prediction that ignored data variability.
+
+# Overall Observation
+# • The ARIMA model stands out as the most effective forecasting method for this dataset due to its ability to handle the data's complexity, including trends and residual patterns.
+# • The time series is likely to show declining sales over the next two years, emphasizing the need for strategic interventions to reverse this trend.
